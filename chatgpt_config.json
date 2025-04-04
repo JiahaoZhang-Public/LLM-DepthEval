@@ -1,0 +1,10 @@
+{
+  "response_timeout": 130,
+  "prompt_interval": 120,
+  "output_dir": "./chatgpt_results",
+  "save_results": false,
+  "add_prefix": true,
+  "prompt_prefix": "Please generate a picture based on the following prompts:\n\n",
+  "new_chat_after_prompts": 1,
+  "default_prompts_file": "./prompts.txt"
+}
