@@ -3,9 +3,11 @@
 
 import os
 import json
+from PIL import ImageGrab
 import time
 import subprocess
-from datetime import datetime
+
+import pyautogui  # Newly added for screen automation
 
 # 配置文件名
 CONFIG_FILE = "chatgpt_config.json"
@@ -13,13 +15,13 @@ CONFIG_FILE = "chatgpt_config.json"
 # 默认配置
 DEFAULT_CONFIG = {
     # 等待 ChatGPT 响应的最长时间（秒）
-    "response_timeout": 130,
+    "response_timeout": 120,
     # 存放结果的目录
     "output_dir": "./chatgpt_results",
     # 是否保存结果
     "save_results": True,
     # 默认的提示词文件路径
-    "default_prompts_file": "./prompts.txt"
+    "default_prompts_file": "./prompts/monocular_depth_estimation.txt"
 }
 
 
@@ -149,13 +151,18 @@ def ask_chatgpt_with_image(img_path, prompt, config):
     if not check_chatgpt_running():
         raise Exception("ChatGPT 未启动或无法访问。")
 
-    # 将图片路径做简单转义（如有引号）：
+    # 将图片路径做简单转义（如有引号）
     shell_safe_img_path = img_path.replace('"', '\\"')
-    # 将提示词做简单转义（多行换行符 \n -> \\n，双引号 -> \\"）：
+    # 将提示词做简单转义（多行换行符 \n -> \\n，双引号 -> \\"）
     safe_prompt = prompt.replace('"', '\\"').replace('\n', '\\n')
 
-    # AppleScript：
-    # Step 1: 复制文本 -> Step 2: ChatGPT粘贴文本 -> Step 3: 复制图片 -> Step 4: ChatGPT粘贴图片 -> Step 5: 回车 -> Step 6: 取最新回复
+    # AppleScript 工作流：
+    # 1. 将提示词写入系统剪贴板
+    # 2. ChatGPT 中粘贴提示词
+    # 3. 将图片文件复制到系统剪贴板
+    # 4. ChatGPT 粘贴图片
+    # 5. 回车发送
+    # 6. 获取最新回答
     applescript = f'''
         -- Step 1: 将提示词写入系统剪贴板
         do shell script "osascript -e 'set the clipboard to \\"{safe_prompt}\\"'"
@@ -184,7 +191,7 @@ def ask_chatgpt_with_image(img_path, prompt, config):
             tell application process "ChatGPT"
                 keystroke "v" using {{command down}}
                 delay 5
-                  -- 等待图片上传
+                -- 等待图片上传
             end tell
         end tell
 
@@ -206,14 +213,13 @@ def ask_chatgpt_with_image(img_path, prompt, config):
         end tell
     '''
 
-    # 轮询直到拿到结果或超时
     start_time = time.time()
     response = None
     timeout = config.get("response_timeout", 130)
 
     while response is None and (time.time() - start_time) < timeout:
         result, status = run_applescript(applescript)
-        if status == 0:  # 说明 AppleScript 成功执行
+        if status == 0:  # AppleScript 成功执行
             response = result
         else:
             time.sleep(2)
@@ -224,6 +230,63 @@ def ask_chatgpt_with_image(img_path, prompt, config):
     return response
 
 
+def copy_image_from_screen(x, y, x_shift=20, y_shift=0):
+    """
+    1. Move the mouse to (x, y)
+    2. Right-click to select the picture
+    3. Move the mouse to (x + x_shift, y + y_shift)
+    4. Left-click to choose '复制图像' (Copy Image)
+    """
+    # A short delay to allow you to switch to the target window
+    time.sleep(2)
+
+    # 1. Move to (x, y)
+    pyautogui.moveTo(x, y, duration=0.2)
+
+    # 2. Right-click to open context menu
+    pyautogui.rightClick()
+    time.sleep(0.5)  # Give time for any UI to respond
+
+    # 3. Move to context menu item
+    pyautogui.moveTo(x + x_shift, y + y_shift, duration=0.2)
+
+    # 4. Left-click to copy the image
+    pyautogui.click()
+
+
+def copy_gpt_output_image_via_pyautogui(x, y, x_shift, y_shift, img_name, output_dir):
+    """
+    1. 使用 copy_image_from_screen 函数，通过 PyAutoGUI 将 GPT 输出图片复制到剪贴板。
+    2. 直接使用 PIL.ImageGrab.grabclipboard() 从剪贴板获取图片对象。
+    3. 将图片保存为 PNG 格式至 '{output_dir}/{img_name}/depth_map.png'。
+
+    Assumes that ChatGPT output images are copied as image objects to the clipboard.
+    """
+    print(f"📍 正在尝试使用 PyAutoGUI 复制坐标 ({x}, {y}) 附近的 GPT 输出图片...")
+    copy_image_from_screen(x, y, x_shift, y_shift)
+
+    # 等待剪贴板更新
+    time.sleep(2)
+
+    # 直接从剪贴板获取图片对象
+    image = ImageGrab.grabclipboard()
+
+    if image is None:
+        print("❌ 剪贴板中未检测到图片对象，是否忘了选择“复制图像”？")
+        return
+
+    # 构造输出路径
+    target_folder = os.path.join(output_dir, img_name)
+    os.makedirs(target_folder, exist_ok=True)
+    target_path = os.path.join(target_folder, "depth_map.png")
+
+    try:
+        image.save(target_path, "PNG")
+        print(f"✅ 已成功将 ChatGPT 返回图片保存到：{target_path}")
+    except Exception as e:
+        print(f"❌ 图片保存失败：{e}")
+
+
 def main():
     """
     主流程：
@@ -232,6 +295,7 @@ def main():
     3. 询问图片文件夹
     4. 对文件夹中的所有图片，逐张粘贴图片 & 粘贴提示词
     5. 保存结果到 {output_dir}/{图片名}/output.txt
+    6. 使用 PyAutoGUI 函数获取 GPT 返回的图片，并复制到 depth_map.png
     """
     config = load_config()
     output_dir = config["output_dir"]
@@ -280,26 +344,36 @@ def main():
         img_path = os.path.join(image_folder, img_name)
         base_name, _ = os.path.splitext(img_name)
 
-        # 可选：每张图片都新建对话（若不想每张都新建，可以注释掉）
+        # （可选）每张图片都新建对话
         created = create_new_chat()
         if not created:
-            print("新建对话失败，尝试直接在当前对话发送。")
+            print("新建对话失败，尝试在当前对话发送。")
 
-        # 调用我们的函数：复制图片 -> 粘贴 -> 复制提示词 -> 粘贴 -> 等待回复
+        # 调用函数：复制图片 -> 粘贴 -> 粘贴提示词 -> 等待回复
         try:
             response = ask_chatgpt_with_image(img_path, default_prompt, config)
         except Exception as e:
             response = f"处理图片 {img_name} 时出现异常：{str(e)}"
 
-        # 保存结果
+        # 保存文本结果
         save_folder = os.path.join(output_dir, base_name)
         os.makedirs(save_folder, exist_ok=True)
         result_file = os.path.join(save_folder, "output.txt")
-
         with open(result_file, 'w', encoding='utf-8') as rf:
             rf.write(response)
-
         print(f"结果已保存至：{result_file}\n")
+
+        # 使用 PyAutoGUI 将 GPT 输出图片复制到 depth_map.png
+        # 你需要根据实际 ChatGPT 图片坐标进行调整
+        copy_gpt_output_image_via_pyautogui(
+            x=518,       # 这里填你的GPT窗口中图片区域的 x 坐标
+            y=580,       # 这里填你的GPT窗口中图片区域的 y 坐标
+            x_shift=30,  # 右键菜单“复制图像”的 x 偏移
+            y_shift=0,   # 右键菜单“复制图像”的 y 偏移
+            img_name=base_name,
+            output_dir=output_dir
+        )
+
         time.sleep(1)  # 略作停顿，避免切换过快
 
     print("=== 所有图片处理完成 ===")

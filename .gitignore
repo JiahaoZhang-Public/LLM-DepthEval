@@ -1,6 +1,10 @@
+dataset/
+data/
+chatgpt_results/
 
 
-
+!data/example/
+!data/example/**
 
 #-------------Python gitignore template----------
 # Byte-compiled / optimized / DLL files

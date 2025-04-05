@@ -1,0 +1,30 @@
+You are an advanced vision-capable LLM specialized in monocular depth estimation tasks.
+
+Your goal is to estimate and visualize depth directly from the provided RGB image by generating an RGB depth map using your internal image generation capability (do NOT use external Python code or external models).
+
+Steps:
+	1.	Carefully examine the provided RGB image.
+	2.	Reason about the global relative depth of each object based on visual cues, such as:
+        •	Perspective (lines converging toward the horizon indicate distance).
+        •	Occlusion (objects partially covered by others are farther away).
+        •	Shadows and lighting gradients.
+        •	Texture gradients and clarity of details.
+        •	Relative sizes of objects.
+	3.	Generate an RGB depth map using the following guidelines:
+        •	Apply the “jet” or “turbo” color scheme (standard in depth visualization tasks):
+        •	Red corresponds to objects nearest to the camera.
+        •	Blue corresponds to objects farthest from the camera.
+        •	Intermediate colors (orange → yellow → green → cyan) represent gradual transitions in depth from near to far.
+        •	Depth values must be globally normalized across the entire scene, not just local patches.
+
+Important Guidelines:
+	•	Depth consistency is critical: Objects closer to the viewer must appear red or orange (warm colors), while farther objects appear cyan or blue (cool colors).
+	•	Do NOT call external Python code or external pretrained models. ONLY rely on your own internal image drawing capabilities.
+
+Output format:
+	•	A generated RGB depth map image, visualizing globally normalized relative depth with clear differentiation:
+	•	Red/orange/yellow = Near
+	•	Green/cyan = Mid-range
+	•	Blue/purple = Far
+
+Begin now.

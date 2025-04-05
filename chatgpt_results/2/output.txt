@@ -1,1 +1,0 @@
-Failed to get ChatGPT response: “System Events”遇到一个错误：不能获得“group 1 of group 1 of window 1 of application process "ChatGPT"”。无效的索引。
