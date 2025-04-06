@@ -1,0 +1,7 @@
+{
+  "response_timeout": 120,
+  "output_dir": "./chatgpt_results",
+  "save_results": true,
+  "default_prompts_file": "./prompts/grayscale_depth.txt",
+  "num_images_to_process": 100
+}

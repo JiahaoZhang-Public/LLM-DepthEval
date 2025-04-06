@@ -28,7 +28,7 @@ CONFIG_FILE = "chatgpt_config.json"
 
 DEFAULT_CONFIG = {
     "response_timeout": 120,
-    "output_dir": "./data/example/chatgpt_results",
+    "output_dir": "./chatgpt_results",
     "save_results": True,
     "default_prompts_file": "./prompts/grayscale_depth.txt",
     "num_images_to_process": 100  
@@ -297,7 +297,6 @@ def main():
        c) Save text response as 'output.txt'.
        d) Attempt to capture any GPT-returned image via PyAutoGUI, saving as 'depth_map.png'.
        
-    修改内容：支持从输入的图片数据集中随机选择指定数量（默认为100）的图片进行处理，而非处理所有图片。
     """
     config = load_config()
     output_dir = config["output_dir"]

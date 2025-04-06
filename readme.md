@@ -13,6 +13,9 @@ Determine if GPT-4o can perform monocular depth estimation without explicit fine
 Explore the potential of GPT-4o as an implicit "world model," reflecting an understanding of physical relationships within visual scenes.
 
 Assess whether GPT-4o's multimodal learning enables the model to infer accurate spatial relationships from purely visual and textual contexts.
+## 📊 Pipeline Overview
+
+![LLM-DepthEval Pipeline](/media/LLM-DepthEval.png)
 
 ## 🗂 Project Structure
 
@@ -45,3 +48,11 @@ Investigate transfer learning capabilities of GPT-4o across diverse multimodal t
 ## 🤝 Collaborators Wanted
 
 We are actively looking for passionate collaborators to join this exploration into the capabilities of GPT-4o in depth estimation and multimodal understanding. Whether your expertise is in computer vision, machine learning, multimodal models, or evaluation methodologies, we'd love to connect with you.
+
+## 🙏 Acknowledgements
+
+This project draws inspiration from the [GPT-ImgEval](https://github.com/PicoTrex/GPT-ImgEval) repository, particularly in its automated visual evaluation workflow. 
+
+We adapted and extended the pipeline to support automatic image downloading, tailored specifically for macOS systems. Our automation utilizes a combination of **AppleScript** and **PyAutoGUI** to streamline screenshot capturing and clipboard handling.
+
+> ⚠️ **Note**: The automatic processing pipeline is currently tested and supported only on **macOS**.
