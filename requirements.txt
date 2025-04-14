@@ -1,5 +1,7 @@
 openai
+numpy
 playwright
+pyautogui
 requests
 pillow
 pytest
