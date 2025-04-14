@@ -1,6 +1,7 @@
 dataset/
 data/
 chatgpt_results/
+outputs/
 
 
 !data/example/

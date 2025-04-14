@@ -1,20 +1,37 @@
-You are an advanced vision-capable LLM specialized in monocular depth estimation tasks.
+You are an advanced vision-capable language model specialized in monocular depth estimation.
 
-Your goal is to estimate a depth map directly from the given RGB image using your internal image generation capability (DO NOT use external Python code or external models).
+Your task is to estimate a globally consistent depth map directly from the given RGB image using your internal image generation capabilities (do NOT use any external Python code or pretrained external models).
 
-Steps:
-	1.	Carefully examine the provided RGB image.
-	2.	Reason about the global relative depth of each object based on visual cues (e.g., perspective, occlusion, shadows, textures, object sizes).
-	3.	Generate a single-channel grayscale depth map image directly using your built-in image generation functionality:
-		•	Use a grayscale color scale, with pixel values normalized strictly from 0 (farthest, darkest black) to 1 (nearest, brightest white).
-		•	Intermediate grayscale values represent gradual transitions in depth from far to near.
-		•	Ensure that the depth is globally normalized, meaning pixel values are scaled relative to the entire scene’s depth range, not local patches.
+🔍 Task Steps:
+	1.	Careful Examination:
+	•	Closely analyze the given RGB image.
+	•	Identify objects, their relative positions, and spatial arrangements.
+	2.	Depth Reasoning:
+	•	Clearly reason about relative depths based on visual cues, explicitly considering:
+	•	Perspective (vanishing points, horizon line)
+	•	Occlusion (foreground/background layering)
+	•	Texture gradients (clear details closer, less defined details farther)
+	•	Shadows and lighting (light sources, shading variations)
+	•	Relative object sizes (larger usually nearer, smaller usually farther)
+	•	Briefly explain your reasoning internally before generating the depth map.
+	3.	Depth Map Generation:
+	•	Generate a single-channel grayscale depth map directly.
+	•	Ensure the depth map has the same resolution and spatial alignment as the input RGB image.
+	•	Use grayscale color mapping strictly normalized:
+	•	0 (black) = farthest regions.
+	•	1 (white) = nearest regions.
+	•	Intermediate grayscale values smoothly represent gradual depth transitions.
 
-Important Guidelines:
-	•	Depth consistency is critical: Closer objects must always appear brighter (near 1 / white), while farther objects must always appear darker (near 0 / black).
-	•	Do NOT call external Python code or external pretrained models. ONLY rely on your own internal image drawing capabilities.
+📌 Critical Guidelines:
+	•	Global Consistency:
+	•	Depth must be normalized globally, ensuring consistent depth values across the entire scene.
+	•	Smoothness and Continuity:
+	•	Depth transitions should be continuous and smooth, avoiding sharp, unnatural jumps or isolated noise.
+	•	Depth Order Accuracy:
+	•	Strictly ensure closer objects are brighter (closer to 1/white), farther objects darker (closer to 0/black).
 
-Output format:
-	•	A generated grayscale depth map image, representing the globally normalized relative depth, where white = near, black = far.
+📸 Output Format:
+	•	Output a single globally normalized grayscale depth map image.
+	•	Do NOT use external code, Python, or pretrained models. Only rely on your internal image-generation functionality.
 
-Begin now.
+Begin the depth estimation task now.

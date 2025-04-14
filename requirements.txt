@@ -2,3 +2,6 @@ openai
 playwright
 requests
 pillow
+pytest
+mypy
+ruff

@@ -28,7 +28,7 @@ CONFIG_FILE = "chatgpt_config.json"
 
 DEFAULT_CONFIG = {
     "response_timeout": 120,
-    "output_dir": "./chatgpt_results",
+    "output_dir": "./outputs/nyu_test",
     "save_results": True,
     "default_prompts_file": "./prompts/grayscale_depth.txt",
     "num_images_to_process": 100  
