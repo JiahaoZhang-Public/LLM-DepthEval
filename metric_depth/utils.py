@@ -2,9 +2,19 @@
 
 """
 Utility functions for depth estimation evaluation
+
+Included :
+- rgb_to_grayscale_depth: Convert an RGB image (H x W x 3) to a single-channel grayscale image
+- scale_and_shift_align: Perform scale and shift alignment (least squares fit) of predicted depth
+to the ground truth depth.
+
+Author: Jiahao Zhang
+Date: 2025-04-14
 """
-from typing import Optional
+from typing import Optional, Tuple
 import numpy as np
+import cv2
+
 
 def rgb_to_grayscale_depth(rgb: np.ndarray) -> np.ndarray:
     """
@@ -61,3 +71,72 @@ def scale_and_shift_align(pred: np.ndarray, gt: np.ndarray, mask: Optional[np.nd
     alpha, beta = result[0].squeeze()
 
     return alpha * pred + beta
+
+def resize_depth_map(
+    depth: np.ndarray,
+    target_shape: Tuple[int, int],
+    interpolation: str = "linear",
+) -> np.ndarray:
+    """
+    Resize a single-channel depth map to `target_shape` via OpenCV.
+
+    Parameters:
+        depth: (H, W) depth map.
+        target_shape: (new_H, new_W).
+        interpolation: "nearest" or "linear".
+
+    Returns:
+        Resized depth map of shape (new_H, new_W).
+    """
+    inter = cv2.INTER_NEAREST if interpolation == "nearest" else cv2.INTER_LINEAR
+    return cv2.resize(depth, (target_shape[1], target_shape[0]), interpolation=inter)
+
+
+def pad_to_aspect_ratio(
+    image: np.ndarray,
+    target_ratio: float,
+    pad_value: float = 0.0,
+) -> np.ndarray:
+    """
+    Pad a 2D array symmetrically so that width/height == target_ratio.
+
+    Parameters:
+        image: (H, W) array to pad.
+        target_ratio: desired W/H.
+        pad_value: fill value.
+
+    Returns:
+        Padded array.
+    """
+    h, w = image.shape
+    current = w / h
+    if abs(current - target_ratio) < 1e-6:
+        return image
+    # decide padding on width or height
+    if current < target_ratio:
+        # need to pad width
+        new_w = int(target_ratio * h)
+        pad = (new_w - w) // 2
+        return np.pad(image, ((0, 0), (pad, new_w - w - pad)), constant_values=pad_value)
+    else:
+        # need to pad height
+        new_h = int(w / target_ratio)
+        pad = (new_h - h) // 2
+        return np.pad(image, ((pad, new_h - h - pad), (0, 0)), constant_values=pad_value)
+
+
+def compute_valid_mask(
+    gt: np.ndarray,
+    invalid_val: float = 0.0,
+) -> np.ndarray:
+    """
+    Build a boolean mask of valid pixels in the ground truth map.
+
+    Parameters:
+        gt: ground‑truth depth (H, W).
+        invalid_val: value to treat as invalid (e.g., 0 or negative).
+
+    Returns:
+        mask: Boolean array where gt > invalid_val.
+    """
+    return gt > invalid_val

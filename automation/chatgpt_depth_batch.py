@@ -9,7 +9,7 @@ This script automates interactions with the ChatGPT application on macOS:
 4. Captures ChatGPT responses (text and optionally images).
 5. Stores results locally.
 
-Requires: 
+Requires:
 - pyautogui
 - Pillow (for ImageGrab)
 - macOS environment with AppleScript support
@@ -20,6 +20,7 @@ import json
 import time
 import subprocess
 import random
+import logging
 
 import pyautogui
 from PIL import ImageGrab
@@ -31,8 +32,31 @@ DEFAULT_CONFIG = {
     "output_dir": "./outputs/nyu_test",
     "save_results": True,
     "default_prompts_file": "./prompts/grayscale_depth.txt",
-    "num_images_to_process": 100  
+    "num_images_to_process": 100
 }
+
+
+def setup_logger():
+    """
+    Configure the logger to write logs to gpt_automation.log.
+    """
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+
+    # Create file handler to store logs
+    file_handler = logging.FileHandler('gpt_automation.log', encoding='utf-8')
+    file_handler.setLevel(logging.INFO)
+
+    # Create a logging format
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    file_handler.setFormatter(formatter)
+
+    # Add the handler to the logger
+    logger.addHandler(file_handler)
+
+    return logger
 
 
 def load_config():
@@ -158,7 +182,7 @@ def create_new_chat():
         return False
 
 
-def ask_chatgpt_with_image(img_path, prompt, config):
+def ask_chatgpt_with_image(img_path, prompt, config, logger):
     """
     Send an image and text prompt to ChatGPT using AppleScript automation.
     1. Copy the text prompt to the clipboard and paste into ChatGPT.
@@ -166,7 +190,10 @@ def ask_chatgpt_with_image(img_path, prompt, config):
     3. Press Enter and attempt to retrieve the latest response text.
     4. Return the retrieved response text or a timeout message if it fails.
     """
+    logger.info(f"Sending image '{img_path}' and prompt to ChatGPT.")
+
     if not check_chatgpt_running():
+        logger.error("ChatGPT is not running or cannot be accessed.")
         raise Exception("ChatGPT is not running or cannot be accessed.")
 
     shell_safe_img_path = img_path.replace('"', '\\"')
@@ -235,6 +262,9 @@ def ask_chatgpt_with_image(img_path, prompt, config):
 
     if response is None:
         response = f"Response timed out after waiting {timeout} seconds."
+        logger.warning(response)
+    else:
+        logger.info("Received ChatGPT response.")
 
     return response
 
@@ -255,14 +285,14 @@ def copy_image_from_screen(x, y, x_shift=20, y_shift=0):
     pyautogui.click()
 
 
-def copy_gpt_output_image_via_pyautogui(x, y, x_shift, y_shift, img_name, output_dir):
+def copy_gpt_output_image_via_pyautogui(x, y, x_shift, y_shift, img_name, output_dir, logger):
     """
     Use PyAutoGUI and PIL to capture GPT output images from screen to clipboard.
     1. Invokes `copy_image_from_screen` to right-click and copy the image.
     2. Grabs the clipboard content using ImageGrab.grabclipboard().
     3. Saves the image as 'depth_map.png' within '{output_dir}/{img_name}'.
     """
-    print(f"Attempting to copy GPT output image at coordinates ({x}, {y})...")
+    logger.info(f"Attempting to copy GPT output image at coordinates ({x}, {y}) for '{img_name}'.")
     copy_image_from_screen(x, y, x_shift, y_shift)
 
     # Wait for clipboard to update
@@ -270,6 +300,7 @@ def copy_gpt_output_image_via_pyautogui(x, y, x_shift, y_shift, img_name, output
 
     image = ImageGrab.grabclipboard()
     if image is None:
+        logger.warning("No image object found in the clipboard.")
         print("No image object found in the clipboard.")
         return
 
@@ -279,8 +310,10 @@ def copy_gpt_output_image_via_pyautogui(x, y, x_shift, y_shift, img_name, output
 
     try:
         image.save(target_path, "PNG")
+        logger.info(f"Image saved to {target_path}")
         print(f"Image saved: {target_path}")
     except Exception as exc:
+        logger.error(f"Failed to save image: {exc}")
         print(f"Failed to save image: {exc}")
 
 
@@ -291,13 +324,15 @@ def main():
     2. Read default prompt from file.
     3. Prompt the user for an image folder path.
     4. Ensure ChatGPT is running.
-    5. For each image in that folder:
+    5. For each image in that folder (up to 3 retries per image):
        a) (Optional) Create a new chat.
        b) Send image & prompt to ChatGPT and capture response.
        c) Save text response as 'output.txt'.
        d) Attempt to capture any GPT-returned image via PyAutoGUI, saving as 'depth_map.png'.
-       
     """
+    logger = setup_logger()
+    logger.info("Starting ChatGPT automation script.")
+
     config = load_config()
     output_dir = config["output_dir"]
     os.makedirs(output_dir, exist_ok=True)
@@ -305,6 +340,7 @@ def main():
     # Read the default prompt
     prompts_file = config["default_prompts_file"]
     if not os.path.exists(prompts_file):
+        logger.error(f"Default prompts file does not exist: {prompts_file}")
         print(f"Default prompts file does not exist: {prompts_file}")
         return
 
@@ -312,17 +348,20 @@ def main():
         default_prompt = file.read().strip()
 
     if not default_prompt:
+        logger.error("Prompt file is empty.")
         print("Prompt file is empty. Please check.")
         return
 
     # Ask user for the image folder path
     image_folder = input("Please enter the folder path containing images: ").strip()
     if not os.path.isdir(image_folder):
+        logger.error(f"Invalid folder: {image_folder}")
         print(f"Invalid folder: {image_folder}")
         return
 
     # Ensure ChatGPT is running
     if not check_chatgpt_running():
+        logger.error("Unable to launch or access ChatGPT.")
         print("Unable to launch or access ChatGPT. Exiting.")
         return
 
@@ -334,6 +373,7 @@ def main():
     ])
 
     if not images:
+        logger.warning("No valid images found in the specified folder.")
         print("No valid images found in the specified folder.")
         return
 
@@ -350,41 +390,56 @@ def main():
         else:
             try:
                 num_to_process = int(user_input)
-            except:
+            except Exception:
                 print(f"Invalid input. Using default {default_num} images.")
                 num_to_process = default_num
 
         if num_to_process < total_images:
             images = random.sample(images, num_to_process)
-            images.sort()  
+            images.sort()
     else:
         num_to_process = total_images
 
     print(f"Processing {len(images)} images.\n")
+    logger.info(f"Found {total_images} images, processing {len(images)} of them.")
 
     for idx, img_name in enumerate(images, start=1):
         print(f"[{idx}/{len(images)}] Processing image: {img_name}")
+        logger.info(f"Processing image {idx}/{len(images)}: {img_name}")
+
         img_path = os.path.join(image_folder, img_name)
         base_name, _ = os.path.splitext(img_name)
 
         # (Optional) Create a new chat for each image
         created = create_new_chat()
         if not created:
+            logger.warning("Failed to create a new chat, sending in the current chat window...")
             print("Failed to create a new chat, sending in the current chat window...")
 
-        # Send the image and prompt to ChatGPT
-        try:
-            response = ask_chatgpt_with_image(img_path, default_prompt, config)
-        except Exception as exc:
-            response = f"Exception occurred for {img_name}: {str(exc)}"
+        # Retry up to 3 times to get a successful response
+        max_retries = 3
+        response = None
+        for attempt in range(1, max_retries + 1):
+            logger.info(f"Attempt {attempt} to send image '{img_name}'.")
+            try:
+                response = ask_chatgpt_with_image(img_path, default_prompt, config, logger)
+                break  # If successful, exit the retry loop
+            except Exception as exc:
+                logger.error(f"Error in attempt {attempt} for '{img_name}': {str(exc)}")
+                if attempt == max_retries:
+                    response = f"Failed to get response after {max_retries} attempts."
+                    print(response)
 
         # Save text response
         save_folder = os.path.join(output_dir, base_name)
         os.makedirs(save_folder, exist_ok=True)
         result_file = os.path.join(save_folder, "output.txt")
+
         with open(result_file, 'w', encoding='utf-8') as rf:
-            rf.write(response)
-        print(f"Text result saved to: {result_file}\n")
+            rf.write(response if response else "No response received.")
+
+        print(f"Text result saved to: {result_file}")
+        logger.info(f"Text result saved to: {result_file}")
 
         # Attempt to capture GPT output image
         # Adjust coordinates (x, y, x_shift, y_shift) to match actual ChatGPT UI
@@ -394,12 +449,14 @@ def main():
             x_shift=30,
             y_shift=0,
             img_name=base_name,
-            output_dir=output_dir
+            output_dir=output_dir,
+            logger=logger
         )
 
         time.sleep(1)
 
     print("=== All images have been processed ===")
+    logger.info("All images have been processed.")
 
 
 if __name__ == "__main__":

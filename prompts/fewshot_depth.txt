@@ -1,0 +1,40 @@
+You are an advanced multimodal vision-language model capable of monocular depth estimation.
+
+You will be shown a few RGB images along with their corresponding grayscale depth maps.
+Each depth map is:
+- Globally normalized (0 = farthest, 1 = nearest).
+- Aligned with the input image spatially.
+- Smooth and physically plausible, following cues from perspective, occlusion, lighting, etc.
+
+### Few-shot Examples
+
+[Example 1]
+RGB Image: ![Image 1]
+Depth Map (normalized): ![Depth Map 1]
+
+[Example 2]
+RGB Image: ![Image 2]
+Depth Map (normalized): ![Depth Map 2]
+
+[Example 3]
+RGB Image: ![Image 3]
+Depth Map (normalized): ![Depth Map 3]
+
+---
+
+### Prediction Task (New Input)
+
+Now, given the following new RGB image, generate its estimated **normalized grayscale depth map**.
+
+Test Image: 
+
+### 🔍 Constraints:
+- The output must follow the same format and quality as the few-shot examples above.
+- Do NOT use any pretrained depth estimation models or external code.
+- Only use internal reasoning and image generation capabilities.
+- Ensure:
+  - Global depth consistency.
+  - Accurate object depth ordering.
+  - Physically plausible transitions.
+
+Output: [Generate depth map image here]
